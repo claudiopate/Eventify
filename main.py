@@ -1,7 +1,8 @@
 from typing import Final
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
-from commands.core.base_command import start_command, help_command
-from commands.loader.pdf_loader import load_document_pdf_command
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler
+from commands.core.base_command import start_command, help_command, cancel
+from commands.loader.pdf_loader import upload, WAITING_FOR_PDF
+from handlers.loader.pdf_handler.pdf_handler import handle_pdf
 from handlers.core.base_handler import handle_message
 from handlers.error.error_base_handler import error
 from typing import Final
@@ -19,7 +20,16 @@ if __name__ == '__main__':
     #Commands
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('load_document_pdf', load_document_pdf_command))    
+    
+    # Configurazione del ConversationHandler per gestire la sequenza di comandi
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('upload', upload)],  # Il comando che avvia la sequenza
+        states={
+            WAITING_FOR_PDF: [MessageHandler(filters.Document.PDF, handle_pdf)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]  # Comando per annullare l'operazione
+    )
+    app.add_handler(conv_handler)    
     
     #Handler
     app.add_handler(MessageHandler(filters.TEXT, handle_message))
